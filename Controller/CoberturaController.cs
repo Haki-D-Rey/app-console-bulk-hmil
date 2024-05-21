@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
+using System.Diagnostics;
+using System.Globalization;
+
 
 namespace MyRestApi.Controllers
 {
@@ -13,7 +16,8 @@ namespace MyRestApi.Controllers
     public class CoberturaController : ControllerBase
     {
         private static readonly string connectionString = "Data Source=localhost;Initial Catalog=Prueba-VDHMIL;User ID=sa;Password=&ecurity23;";
-        private readonly SqlConnection sqlConnection;
+        private static SqlConnection sqlConnection = null;
+        private static string rutaDirectorio = @"/home/haki/csv/"; // Ruta donde están tus archivos CSV
 
         public CoberturaController()
         {
@@ -72,32 +76,195 @@ namespace MyRestApi.Controllers
         [HttpPost]
         public IActionResult BulkInsertFromAccess()
         {
+            var connection = new ConexionManager(connectionString).GetConnection();
 
-            string accessDatabasePath = @"~\2024.04-HOSPITAL"; // Ruta completa de tu archivo de base de datos de Access
-            string accessPassword = "LADA2107"; // La contraseña de tu archivo .accdb
-
-            using (OleDbConnection accessConnection = new OleDbConnection($"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={accessDatabasePath};Jet OLEDB:Database Password={accessPassword}"))
+            if (connection != null)
             {
-                accessConnection.Open();
-                OleDbCommand cmd = new OleDbCommand("SELECT * FROM Cobertura_Hospital", accessConnection);
-                OleDbDataReader reader = cmd.ExecuteReader();
-
-                using (SqlBulkCopy bulkCopy = new SqlBulkCopy(sqlConnection))
+                try
                 {
-                    bulkCopy.DestinationTableName = "dbo.[MAESTRO DE DPC]";
-                    bulkCopy.BatchSize = 10000; // Tamaño del lote a insertar
-                    bulkCopy.BulkCopyTimeout = 600; // Tiempo de espera en segundos
-                    try
-                    {
-                        bulkCopy.WriteToServer(reader);
-                        return Ok("Bulk insert from Access to SQL Server completed successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        return StatusCode(500, $"Error: {ex.Message}");
-                    }
+                    Stopwatch totalStopwatch = Stopwatch.StartNew(); // Iniciar el cronómetro total
+
+                    ProcesarArchivosCSV(rutaDirectorio);
+
+                    totalStopwatch.Stop(); // Detener el cronómetro total
+                    Console.WriteLine($"Tiempo total de procesamiento: {totalStopwatch.Elapsed}");
+
+                    connection.Close();
+
+                    // Devolver una respuesta exitosa (código 200)
+                    return Ok("Bulk insert desde Access a SQL Server completado exitosamente.");
+                }
+                catch (Exception ex)
+                {
+                    // En caso de error, devolver un código de error (por ejemplo, 500) con el mensaje de error
+                    return StatusCode(500, $"Error: {ex.Message}");
                 }
             }
+            else
+            {
+                Console.WriteLine("No se pudo abrir la conexión con la base de datos.");
+
+                // En caso de que la conexión falle, también devolver un código de error (por ejemplo, 500)
+                return StatusCode(500, "Error al abrir la conexión con la base de datos.");
+            }
         }
+
+        static void ProcesarArchivosCSV(string rutaDirectorio)
+        {
+            try
+            {
+                string[] archivosCSV = Directory.GetFiles(rutaDirectorio, "*.csv");
+                foreach (string archivo in archivosCSV)
+                {
+                    Stopwatch archivoStopwatch = Stopwatch.StartNew(); // Iniciar el cronómetro para el archivo actual
+
+                    using (var lector = new StreamReader(archivo))
+                    {
+                        // Crear un DataTable para almacenar los datos
+                        DataTable dataTable = new DataTable();
+
+                        // Define el diccionario de mapeo de columnas
+                        Dictionary<string, string> columnMapping = new Dictionary<string, string>()
+                        {
+                            { "Tipo_regiStro", "ORIGEN_1" },
+                            { "Clas_usuario", "ORD" },
+                            { "Identidad", "IDENTIDAD" },
+                            { "Expediente", "N_EXPEDIENTE" },
+                            { "Cedula", "CEDULA" },
+                            { "Grado", "GRADO" },
+                            { "Dgrado", "DGRADO" },
+                            { "P_Apellido", "APELLIDO1" },
+                            { "S_apellido", "APELLIDO2" },
+                            { "P_nombre", "NOMBRE1" },
+                            { "S_nombre", "NOMBRE2" },
+                            { "Sexo", "SEXO" },
+                            { "Fecha_Nac", "F_NAC" },
+                            { "Fecha_ing", "F_ING" },
+                            { "Dcargo", "CARGO" },
+                            { "Publico", "PUBLICO" },
+                            { "Dunidad", "DUNIDAD" },
+                            { "Fecha_Ret", "FECHA_RET" },
+                            { "Inico_Cob", "INICIO_COB" },
+                            { "Fin_Cob", "FIN_COB" },
+                            { "Mes_Proceso", "MES_PROCESO" },
+                            { "Estado", "ESTADO" },
+                            { "NCarnet", "NCARNET" },
+                            { "LugarChequeo", "LUGAR_CHEQUEO" }
+                        };
+
+
+                        // Agregar las columnas en el orden correcto
+                        foreach (var entry in columnMapping)
+                        {
+                            string columnNameInDB = entry.Value;
+
+                            // Agregar la columna con el nombre correspondiente de la base de datos
+                            dataTable.Columns.Add(columnNameInDB);
+                        }
+
+                        // Leer y agregar los datos al nuevo DataTable, empezando desde la segunda fila
+                        bool primeraFila = true;
+                        int numColumnas = columnMapping.Count;
+                        string[] columnasOrdenadas = new string[numColumnas]; // Arreglo para almacenar las columnas en orden
+                        while (!lector.EndOfStream)
+                        {
+                            string linea = lector.ReadLine();
+
+                            // Saltar la primera fila que contiene los nombres de las columnas
+                            if (primeraFila)
+                            {
+                                // Dividir la línea para obtener las columnas
+                                string[] columnasCSV = linea.Split(',');
+
+                                // Reordenar las columnas según el mapeo y almacenarlas en el arreglo
+                                for (int i = 0; i < numColumnas; i++)
+                                {
+                                    string columnNameInCSV = columnMapping.ElementAt(i).Key;
+                                    string columnNameInBD = columnMapping.ElementAt(i).Value;
+                                    int index = Array.IndexOf(columnasCSV, columnNameInCSV);
+                                    if (index != -1)
+                                    {
+                                        columnasOrdenadas[index] = columnNameInBD;
+                                    }
+                                    else
+                                    {
+                                        // Si la columna no se encuentra en el archivo CSV, establecer un valor predeterminado
+                                        columnasOrdenadas[index] = ""; // O cualquier otro valor predeterminado que desees
+                                    }
+                                }
+
+                                primeraFila = false;
+                                continue;
+                            }
+
+                            string[] valores = linea.Split(','); // Separar por comas
+
+                            // Crear un nuevo array para almacenar los valores en el orden correcto
+                            object[] valoresOrdenados = new object[numColumnas];
+
+                            // Mapear los valores de la fila actual al nuevo array según el arreglo de columnas ordenadas
+                            for (int i = 0; i < numColumnas; i++)
+                            {
+                                if (!string.IsNullOrEmpty(columnasOrdenadas[i]))
+                                {
+                                    int index = Array.IndexOf(columnasOrdenadas, columnasOrdenadas[i]);
+                                    valoresOrdenados[index] = valores[index];
+                                }
+                            }
+
+                            // Agregar la nueva fila al nuevo DataTable
+                            dataTable.Rows.Add(valoresOrdenados);
+                        }
+
+                        using (SqlConnection sqlConnection = new SqlConnection(connectionString))
+                        {
+                            sqlConnection.Open();
+
+                            // Iniciar la transacción para el bulk insert
+                            SqlTransaction transaction = sqlConnection.BeginTransaction();
+
+                            // Crear el objeto SqlBulkCopy
+                            using (var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction))
+                            {
+                                bulkCopy.DestinationTableName = "dbo.[MAESTRO DE DPC]"; // Reemplaza con el nombre de tu tabla
+                                bulkCopy.BatchSize = 10000; // Tamaño del lote a insertar
+                                bulkCopy.BulkCopyTimeout = 600; // Tiempo de espera en segundos
+
+                                try
+                                {
+                                    // Realizar el bulk insert
+                                    bulkCopy.WriteToServer(dataTable);
+
+                                    // Commit de la transacción si todo fue exitoso
+                                    transaction.Commit();
+                                    Console.WriteLine("Bulk insert exitoso para el archivo: " + archivo);
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Rollback en caso de error
+                                    Console.WriteLine("Error durante el bulk insert para el archivo " + archivo + ": " + ex.Message);
+                                    transaction.Rollback();
+                                }
+                            }
+                        }
+                    }
+
+                    // Pequeña pausa para permitir que el sistema libere el archivo
+                    System.Threading.Thread.Sleep(100);
+
+                    archivoStopwatch.Stop(); // Detener el cronómetro para el archivo actual
+                    Console.WriteLine($"Tiempo de procesamiento para {archivo}: {archivoStopwatch.Elapsed}");
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+                Console.WriteLine($"Error: El directorio {rutaDirectorio} no existe");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+
     }
 }

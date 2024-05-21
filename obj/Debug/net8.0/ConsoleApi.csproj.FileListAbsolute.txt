@@ -48,3 +48,4 @@
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Diagnostics.PerformanceCounter.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Data.OleDb.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Diagnostics.PerformanceCounter.dll
+/home/haki/Documentos/Proyectos/C#/ConsoleApi/obj/Debug/net8.0/ConsoleApi.sourcelink.json
