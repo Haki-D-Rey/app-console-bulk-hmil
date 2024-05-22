@@ -20,7 +20,6 @@
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/Microsoft.Win32.SystemEvents.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/MySql.Data.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/Newtonsoft.Json.dll
-/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/Oracle.ManagedDataAccess.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Configuration.ConfigurationManager.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Data.SqlClient.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Drawing.Common.dll
@@ -44,8 +43,5 @@
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/netcoreapp3.0/System.Windows.Extensions.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/obj/Debug/net8.0/ConsoleApi.csproj.AssemblyReference.cache
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/obj/Debug/net8.0/ConsoleApi.csproj.Up2Date
-/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Data.OleDb.dll
-/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/System.Diagnostics.PerformanceCounter.dll
-/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Data.OleDb.dll
-/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Diagnostics.PerformanceCounter.dll
 /home/haki/Documentos/Proyectos/C#/ConsoleApi/obj/Debug/net8.0/ConsoleApi.sourcelink.json
+/home/haki/Documentos/Proyectos/C#/ConsoleApi/bin/Debug/net8.0/runtimes/win/lib/netstandard2.0/System.Security.Cryptography.ProtectedData.dll

@@ -1,12 +1,8 @@
 using ConsoleApi.Model;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.Globalization;
 
 
 namespace MyRestApi.Controllers
@@ -16,6 +12,8 @@ namespace MyRestApi.Controllers
     public class CoberturaController : ControllerBase
     {
         private static readonly string connectionString = "Data Source=localhost;Initial Catalog=Prueba-VDHMIL;User ID=sa;Password=&ecurity23;";
+        private static readonly string connectionStringProd = "Data Source=HMIL-SPC-APPPRD;Initial Catalog=RRHH;User ID=sa;Password=P@$$W0RD;";
+
         private static SqlConnection sqlConnection = null;
         private static string rutaDirectorio = @"/home/haki/csv/"; // Ruta donde están tus archivos CSV
 
@@ -109,7 +107,7 @@ namespace MyRestApi.Controllers
             }
         }
 
-        static void ProcesarArchivosCSV(string rutaDirectorio)
+        public void ProcesarArchivosCSV(string rutaDirectorio)
         {
             try
             {
@@ -126,8 +124,8 @@ namespace MyRestApi.Controllers
                         // Define el diccionario de mapeo de columnas
                         Dictionary<string, string> columnMapping = new Dictionary<string, string>()
                         {
-                            { "Tipo_regiStro", "ORIGEN_1" },
-                            { "Clas_usuario", "ORD" },
+                            { "Origen", "ORIGEN_1" },
+                            { "Ord", "ORD" },
                             { "Identidad", "IDENTIDAD" },
                             { "Expediente", "N_EXPEDIENTE" },
                             { "Cedula", "CEDULA" },
@@ -142,7 +140,7 @@ namespace MyRestApi.Controllers
                             { "Fecha_ing", "F_ING" },
                             { "Dcargo", "CARGO" },
                             { "Publico", "PUBLICO" },
-                            { "Dunidad", "DUNIDAD" },
+                            { "Dunidad", "UM" },
                             { "Fecha_Ret", "FECHA_RET" },
                             { "Inico_Cob", "INICIO_COB" },
                             { "Fin_Cob", "FIN_COB" },
@@ -189,7 +187,7 @@ namespace MyRestApi.Controllers
                                     else
                                     {
                                         // Si la columna no se encuentra en el archivo CSV, establecer un valor predeterminado
-                                        columnasOrdenadas[index] = ""; // O cualquier otro valor predeterminado que desees
+                                        columnasOrdenadas[i] = ""; // O cualquier otro valor predeterminado que desees
                                     }
                                 }
 
@@ -201,6 +199,7 @@ namespace MyRestApi.Controllers
 
                             // Crear un nuevo array para almacenar los valores en el orden correcto
                             object[] valoresOrdenados = new object[numColumnas];
+                            List<Grado> ListaGradosMilitares = ObtenerGradosMilitares("S1");
 
                             // Mapear los valores de la fila actual al nuevo array según el arreglo de columnas ordenadas
                             for (int i = 0; i < numColumnas; i++)
@@ -265,6 +264,50 @@ namespace MyRestApi.Controllers
                 Console.WriteLine($"Error: {ex.Message}");
             }
         }
+
+
+        public List<Grado> ObtenerGradosMilitares(string codigo = null)
+        {
+            try
+            {
+                List<Grado> ListaGradosMilitares = new List<Grado>();
+                using (var connection = new ConexionManager(connectionStringProd).GetConnection())
+                {
+
+                    var cmd = connection.CreateCommand();
+                    cmd.CommandText = "SELECT * FROM dbo.[CAT DE GRADOS]"; // Remove "@" before "SELECT"
+                    var dataReader = cmd.ExecuteReader();
+
+                    if (dataReader.HasRows)
+                    {
+                        while (dataReader.Read())
+                        {
+                            Grado grado = new Grado
+                            {
+                                CODIGO = dataReader.GetString(dataReader.GetOrdinal("CODIGO")),
+                                DESCRIPCION = dataReader.GetString(dataReader.GetOrdinal("DESCRIPCION"))
+                            };
+                            ListaGradosMilitares.Add(grado);
+                        }
+                    }
+
+                }
+
+                if(!string.IsNullOrEmpty(codigo)){
+                    return ListaGradosMilitares.Where(grado => grado.CODIGO == codigo).ToList();
+                }
+
+                return ListaGradosMilitares;
+            }
+            catch (Exception ex)
+            {
+                // Handle any exceptions here
+                Console.WriteLine("Error al obtener grados militares: " + ex.Message);
+                // Return an empty array or null indicating failure
+                return new List<Grado>();
+            }
+        }
+
 
     }
 }
